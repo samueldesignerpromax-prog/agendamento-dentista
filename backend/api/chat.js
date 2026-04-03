@@ -1,8 +1,4 @@
-const fs = require('fs');
-const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-
-const DATA_PATH = path.join(process.cwd(), 'data', 'appointments.json');
 
 // Procedimentos disponíveis
 const PROCEDIMENTOS = [
@@ -25,22 +21,10 @@ const HORARIOS = {
   saturday: ['09:00', '10:00', '11:00']
 };
 
-function readData() {
-  if (!fs.existsSync(DATA_PATH)) {
-    fs.writeFileSync(DATA_PATH, JSON.stringify({ appointments: [], conversations: [] }, null, 2));
-  }
-  const data = fs.readFileSync(DATA_PATH, 'utf8');
-  return JSON.parse(data);
-}
-
-function writeData(data) {
-  fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2));
-}
-
 function isWeekend(dateStr) {
   const date = new Date(dateStr);
   const day = date.getDay();
-  return day === 0; // Domingo
+  return day === 0;
 }
 
 function isSaturday(dateStr) {
@@ -50,7 +34,7 @@ function isSaturday(dateStr) {
 
 function getAvailableHours(dateStr) {
   if (isWeekend(dateStr)) {
-    return []; // Domingo fechado
+    return [];
   }
   if (isSaturday(dateStr)) {
     return HORARIOS.saturday;
@@ -91,8 +75,7 @@ class ChatSession {
     this.step = 'ask_name';
     return {
       message: "Olá! 👋 Bem-vindo à clínica odontológica Sorriso Perfeito.\n\nVamos agendar seu atendimento? Qual é o seu nome?",
-      options: [],
-      step: this.step
+      options: []
     };
   }
 
@@ -100,67 +83,56 @@ class ChatSession {
     if (!name || name.trim().length < 2) {
       return {
         message: "Por favor, digite seu nome completo:",
-        options: [],
-        step: this.step
+        options: []
       };
     }
     this.data.nome = name.trim();
     this.step = 'ask_procedure';
     
-    const procedureList = PROCEDIMENTOS.map(p => 
-      `${p.nome} - R$ ${p.preco.toFixed(2)}`
-    ).join('\n');
-    
     return {
-      message: `Prazer em conhecê-lo, ${this.data.nome}! 🦷\n\nQual procedimento você gostaria de realizar?\n\n${procedureList}\n\nDigite o número correspondente:\n1 - Limpeza\n2 - Clareamento\n3 - Extração\n4 - Ortodontia`,
+      message: `Prazer em conhecê-lo, ${this.data.nome}! 🦷\n\nQual procedimento você gostaria de realizar?\n\n1 - Limpeza (R$120)\n2 - Clareamento (R$800)\n3 - Extração (R$300)\n4 - Ortodontia (R$100)\n\nDigite o número correspondente:`,
       options: [
-        { text: "Limpeza (R$120)", value: "limpeza" },
-        { text: "Clareamento (R$800)", value: "clareamento" },
-        { text: "Extração (R$300)", value: "extracao" },
-        { text: "Ortodontia (R$100)", value: "ortodontia" }
-      ],
-      step: this.step
+        { text: "Limpeza (R$120)", value: "1" },
+        { text: "Clareamento (R$800)", value: "2" },
+        { text: "Extração (R$300)", value: "3" },
+        { text: "Ortodontia (R$100)", value: "4" }
+      ]
     };
   }
 
   handleProcedure(choice) {
-    let procedureId;
-    if (choice === '1' || choice === 'limpeza') procedureId = 'limpeza';
-    else if (choice === '2' || choice === 'clareamento') procedureId = 'clareamento';
-    else if (choice === '3' || choice === 'extracao') procedureId = 'extracao';
-    else if (choice === '4' || choice === 'ortodontia') procedureId = 'ortodontia';
+    let procedure;
+    if (choice === '1') procedure = PROCEDIMENTOS[0];
+    else if (choice === '2') procedure = PROCEDIMENTOS[1];
+    else if (choice === '3') procedure = PROCEDIMENTOS[2];
+    else if (choice === '4') procedure = PROCEDIMENTOS[3];
     else {
       return {
         message: "Opção inválida. Por favor, escolha uma opção de 1 a 4:",
         options: [
-          { text: "Limpeza (R$120)", value: "limpeza" },
-          { text: "Clareamento (R$800)", value: "clareamento" },
-          { text: "Extração (R$300)", value: "extracao" },
-          { text: "Ortodontia (R$100)", value: "ortodontia" }
-        ],
-        step: this.step
+          { text: "Limpeza (R$120)", value: "1" },
+          { text: "Clareamento (R$800)", value: "2" },
+          { text: "Extração (R$300)", value: "3" },
+          { text: "Ortodontia (R$100)", value: "4" }
+        ]
       };
     }
     
-    const procedure = PROCEDIMENTOS.find(p => p.id === procedureId);
     this.data.procedimento = procedure;
     this.step = 'ask_date';
     
     return {
       message: `Ótima escolha! ${procedure.nome} - R$ ${procedure.preco.toFixed(2)}\n\nQual data você gostaria de agendar? (Formato: DD/MM/AAAA)\n\n📅 Segunda a Sexta: 09h às 18h\n📅 Sábado: 09h às 13h\n❌ Domingo: Fechado`,
-      options: [],
-      step: this.step
+      options: []
     };
   }
 
   handleDate(dateStr) {
-    // Validar formato DD/MM/AAAA
     const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
     if (!dateRegex.test(dateStr)) {
       return {
         message: "Formato inválido! Por favor, digite a data no formato DD/MM/AAAA:\n\nExemplo: 25/12/2024",
-        options: [],
-        step: this.step
+        options: []
       };
     }
     
@@ -172,8 +144,7 @@ class ChatSession {
     if (date < today) {
       return {
         message: "❌ Data inválida! Por favor, escolha uma data futura:\n\nFormato: DD/MM/AAAA",
-        options: [],
-        step: this.step
+        options: []
       };
     }
     
@@ -181,8 +152,7 @@ class ChatSession {
     if (availableHours.length === 0) {
       return {
         message: "❌ Desculpe, não atendemos aos domingos. Por favor, escolha uma data de segunda a sábado:",
-        options: [],
-        step: this.step
+        options: []
       };
     }
     
@@ -194,8 +164,7 @@ class ChatSession {
     
     return {
       message: `📅 Data escolhida: ${dateStr}\n\nHorários disponíveis:\n${hoursList}\n\nDigite o horário desejado:`,
-      options: options,
-      step: this.step
+      options: options
     };
   }
 
@@ -205,51 +174,39 @@ class ChatSession {
     if (!availableHours.includes(time)) {
       return {
         message: `❌ Horário inválido! Horários disponíveis: ${availableHours.join(', ')}\n\nDigite um horário válido:`,
-        options: availableHours.map(hour => ({ text: hour, value: hour })),
-        step: this.step
+        options: availableHours.map(hour => ({ text: hour, value: hour }))
       };
     }
     
     this.data.horario = time;
     this.step = 'ask_payment';
     
-    const paymentList = PAGAMENTOS.map(p => {
-      if (p.desconto > 0) {
-        const precoComDesconto = this.data.procedimento.preco * (1 - p.desconto / 100);
-        return `${p.nome} - ${p.desconto}% desconto (R$ ${precoComDesconto.toFixed(2)})`;
-      }
-      return `${p.nome} - R$ ${this.data.procedimento.preco.toFixed(2)}`;
-    }).join('\n');
-    
     return {
-      message: `⏰ Horário escolhido: ${time}\n\n💰 Formas de pagamento:\n\n${paymentList}\n\nDigite o número correspondente:\n1 - PIX (10% desconto)\n2 - Cartão de crédito\n3 - Dinheiro`,
+      message: `⏰ Horário escolhido: ${time}\n\n💰 Formas de pagamento:\n\n1 - PIX (10% desconto)\n2 - Cartão de crédito\n3 - Dinheiro\n\nDigite o número correspondente:`,
       options: [
-        { text: "PIX (10% desconto)", value: "pix" },
-        { text: "Cartão de crédito", value: "cartao" },
-        { text: "Dinheiro", value: "dinheiro" }
-      ],
-      step: this.step
+        { text: "PIX (10% desconto)", value: "1" },
+        { text: "Cartão de crédito", value: "2" },
+        { text: "Dinheiro", value: "3" }
+      ]
     };
   }
 
   handlePayment(choice) {
-    let paymentId;
-    if (choice === '1' || choice === 'pix') paymentId = 'pix';
-    else if (choice === '2' || choice === 'cartao') paymentId = 'cartao';
-    else if (choice === '3' || choice === 'dinheiro') paymentId = 'dinheiro';
+    let payment;
+    if (choice === '1') payment = PAGAMENTOS[0];
+    else if (choice === '2') payment = PAGAMENTOS[1];
+    else if (choice === '3') payment = PAGAMENTOS[2];
     else {
       return {
         message: "Opção inválida! Escolha 1, 2 ou 3:",
         options: [
-          { text: "PIX (10% desconto)", value: "pix" },
-          { text: "Cartão de crédito", value: "cartao" },
-          { text: "Dinheiro", value: "dinheiro" }
-        ],
-        step: this.step
+          { text: "PIX (10% desconto)", value: "1" },
+          { text: "Cartão de crédito", value: "2" },
+          { text: "Dinheiro", value: "3" }
+        ]
       };
     }
     
-    const payment = PAGAMENTOS.find(p => p.id === paymentId);
     let valorFinal = this.data.procedimento.preco;
     let desconto = 0;
     
@@ -263,38 +220,35 @@ class ChatSession {
     this.data.desconto = desconto;
     this.step = 'confirm';
     
-    const confirmMessage = `📋 Por favor, confirme seus dados:\n\n👤 Nome: ${this.data.nome}\n🦷 Procedimento: ${this.data.procedimento.nome}\n💰 Valor: R$ ${this.data.procedimento.preco.toFixed(2)}\n${payment.desconto > 0 ? `🎉 Desconto: -R$ ${desconto.toFixed(2)}\n💵 Valor final: R$ ${valorFinal.toFixed(2)}\n` : ''}📅 Data: ${this.data.data}\n⏰ Horário: ${this.data.horario}\n💳 Pagamento: ${payment.nome}\n\nDeseja confirmar o agendamento?\n\nDigite 1 para SIM ou 2 para CANCELAR`;
+    let confirmMessage = `📋 Por favor, confirme seus dados:\n\n👤 Nome: ${this.data.nome}\n🦷 Procedimento: ${this.data.procedimento.nome}\n💰 Valor: R$ ${this.data.procedimento.preco.toFixed(2)}`;
+    
+    if (payment.desconto > 0) {
+      confirmMessage += `\n🎉 Desconto: -R$ ${desconto.toFixed(2)}\n💵 Valor final: R$ ${valorFinal.toFixed(2)}`;
+    }
+    
+    confirmMessage += `\n📅 Data: ${this.data.data}\n⏰ Horário: ${this.data.horario}\n💳 Pagamento: ${payment.nome}\n\nDeseja confirmar o agendamento?\n\nDigite 1 para SIM ou 2 para CANCELAR`;
     
     return {
       message: confirmMessage,
       options: [
-        { text: "✅ Sim, confirmar", value: "confirm" },
-        { text: "❌ Cancelar", value: "cancel" }
-      ],
-      step: this.step
+        { text: "✅ Sim, confirmar", value: "1" },
+        { text: "❌ Cancelar", value: "2" }
+      ]
     };
   }
 
   handleConfirm(choice) {
-    if (choice === '1' || choice === 'confirm' || choice === 'sim') {
-      // Salvar agendamento
+    if (choice === '1') {
       const appointment = {
         id: uuidv4(),
         nome: this.data.nome,
-        procedimento: this.data.procedimento,
+        procedimento: this.data.procedimento.nome,
+        preco: this.data.valorFinal,
         data: this.data.data,
         horario: this.data.horario,
         pagamento: this.data.pagamento.nome,
-        valorOriginal: this.data.procedimento.preco,
-        desconto: this.data.desconto,
-        valorFinal: this.data.valorFinal,
-        createdAt: new Date().toISOString(),
-        status: 'agendado'
+        createdAt: new Date().toISOString()
       };
-      
-      const db = readData();
-      db.appointments.push(appointment);
-      writeData(db);
       
       const finalMessage = `✅ AGENDAMENTO CONFIRMADO!\n\n👤 Nome: ${this.data.nome}\n🦷 Procedimento: ${this.data.procedimento.nome}\n💰 Valor: R$ ${this.data.valorFinal.toFixed(2)}\n📅 Data: ${this.data.data}\n⏰ Horário: ${this.data.horario}\n💳 Pagamento: ${this.data.pagamento.nome}\n\n📌 Entraremos em contato caso necessário.\n\nObrigado por escolher a clínica Sorriso Perfeito! 🦷✨\n\nDeseja fazer um novo agendamento? Digite "sim" para recomeçar.`;
       
@@ -302,8 +256,7 @@ class ChatSession {
       
       return {
         message: finalMessage,
-        options: [{ text: "🔄 Novo agendamento", value: "reset" }],
-        step: this.step,
+        options: [{ text: "🔄 Novo agendamento", value: "sim" }],
         appointment: appointment
       };
     } else {
@@ -318,11 +271,10 @@ class ChatSession {
   }
 }
 
-// Armazenar sessões (em produção, usar Redis)
 const sessions = new Map();
 
 module.exports = async (req, res) => {
-  // CORS
+  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -333,23 +285,30 @@ module.exports = async (req, res) => {
   }
   
   if (req.method === 'POST') {
-    const { message, sessionId } = req.body;
-    
-    let session = sessions.get(sessionId);
-    if (!session) {
-      session = new ChatSession(sessionId);
-      sessions.set(sessionId, session);
+    try {
+      const { message, sessionId } = req.body;
+      
+      let session = sessions.get(sessionId);
+      if (!session) {
+        session = new ChatSession(sessionId);
+        sessions.set(sessionId, session);
+      }
+      
+      const response = session.processMessage(message);
+      
+      res.status(200).json({
+        success: true,
+        message: response.message,
+        options: response.options || [],
+        appointment: response.appointment || null
+      });
+    } catch (error) {
+      console.error('Error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Erro interno do servidor' 
+      });
     }
-    
-    const response = session.processMessage(message);
-    
-    res.json({
-      success: true,
-      message: response.message,
-      options: response.options,
-      step: response.step,
-      appointment: response.appointment
-    });
   } else {
     res.status(405).json({ error: 'Método não permitido' });
   }
