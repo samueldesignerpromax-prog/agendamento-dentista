@@ -1,0 +1,12 @@
+{
+  "name": "dental-chatbot",
+  "version": "1.0.0",
+  "description": "Chatbot para agendamento odontológico",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel deploy"
+  },
+  "dependencies": {
+    "uuid": "^9.0.0"
+  }
+}
