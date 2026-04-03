@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "description": "Chatbot para agendamento odontológico",
   "scripts": {
-    "dev": "vercel dev",
-    "deploy": "vercel deploy"
+    "vercel-build": "echo Build completed"
   },
   "dependencies": {
     "uuid": "^9.0.0"
