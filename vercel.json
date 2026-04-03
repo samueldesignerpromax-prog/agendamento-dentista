@@ -1,0 +1,17 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/backend/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/frontend/$1"
+    }
+  ],
+  "functions": {
+    "backend/api/*.js": {
+      "maxDuration": 10
+    }
+  }
+}
